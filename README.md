@@ -4,7 +4,7 @@ Algorithmic trading can be boring, but with a bit of imagination and using exoti
 
 ### Warren Buffet used to say you gotta invest in people, not in businesses.
 
-My elaboration of it is that markets always change and evolve, and business have to pivot or die.
+i.e. markets always change and evolve, and business have to pivot or die.
 
 
 ## :exclamation: Work in progress - this repo contains scripts used during the still ongoing research phase
@@ -12,9 +12,13 @@ My elaboration of it is that markets always change and evolve, and business have
 
 
 ### The strategy
+
+##### Note: I don't work in the field, algorithmic trading is an hobby of mine, I'm just an amateur trying to approach the problem in a professionalish way
+
+
 So the idea here is to create a portfolio management algorithm guided by some metrics about companies upper management's quality.
 
-The strategy would be a portfolio rebalancing one: starting with a pool of the 2000-1000 most liquid stocks, reduce the number to the top 200-100 according to the defined metrics. Define a rebalancing period and keep going like that.
+The strategy would be a portfolio rebalancing one: starting with a pool of the 1000-2000 most liquid stocks, reduce the number to the top 100-200 according to the defined metrics. Define a rebalancing period and keep going like that.
 
 But where to get the data?
 
@@ -27,5 +31,6 @@ Numbers of reviews seem to be sufficiently large for most of the stocks, enough 
 #### The plan here is to:
 - Crawl all the data needed from Glassdoor, Google, TradingView stock screener - mainly Node.js
 - Formulate ideas and check correlations and other metrics in Python
-- If the strategy shows signs of an alpha, go on inspecting the logic
-- Build the portfolio management application interfacing with a funded live broker account
+- If the strategy shows signs of an alpha, go on inspecting and defining the logic, to eventually build the portfolio management application interfacing with a funded trading account
+- If it doesn't, the most likely option here, don't push it. Just polish the repo and go on with the next project. 
+

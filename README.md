@@ -1,22 +1,19 @@
 # Algorithmic trading strategy - Glassdoor exotic data
-
+<br>
 Algorithmic trading can be boring, but with a bit of imagination and using exotic data sources, it can also be really fun. 
 
 ### Warren Buffet used to say you gotta invest in people, not in businesses.
 
 i.e. markets always change and evolve, and businesses have to pivot or die.
-
-
+<br><br>
 ## :exclamation: Work in progress - this repo contains scripts used during the still ongoing research phase
-
-
+<br>
 
 ### The strategy
+##### Note: I don't work in the field, algorithmic trading is an hobby of mine, I'm a software engineer with very limited finance education trying to approach the problem in a professionalish way. 
+<br>
 
-##### Note: I don't work in the field, algorithmic trading is an hobby of mine, I'm just an amateur trying to approach the problem in a professionalish way
-
-
-So the idea here is to create a portfolio management algorithm guided by some metrics about companies upper management's quality.
+The idea here is to create a portfolio management algorithm guided by some metrics about companies upper management's quality.
 
 The strategy would be a portfolio rebalancing one: starting with a pool of the 1000-2000 most liquid stocks, reduce the number to the top 100-200 according to the defined metrics. Define a rebalancing period and keep going like that.
 

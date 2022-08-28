@@ -4,7 +4,7 @@ Algorithmic trading can be boring, but with a bit of imagination and using exoti
 
 ### Warren Buffet used to say you gotta invest in people, not in businesses.
 
-i.e. markets always change and evolve, and business have to pivot or die.
+i.e. markets always change and evolve, and businesses have to pivot or die.
 
 
 ## :exclamation: Work in progress - this repo contains scripts used during the still ongoing research phase

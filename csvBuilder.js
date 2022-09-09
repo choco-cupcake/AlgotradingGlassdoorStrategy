@@ -1,40 +1,39 @@
 // now we want to craft an excel file to move te analysis part on Excel to perform the first tests
 
-const CSVWriter = require('csv-writer')
+const fs = require('fs')
 let csvWriter
 const { MongoClient, ServerApiVersion } = require('mongodb')
 require('dotenv').config()
 
-let EMA10 = {}
-let EMA14 = {}
-
+main()
 
 async function main(){
   await setupMongoDB()
   console.log("MongoDB setup done")
+  setupCSV()
 
   const companies = await (await mongoDB.db("GD_strategy").collection("GD_companies").find({})).toArray()
   console.log("Companies gathered")
   for(let company of companies){
-    processCompany(company)
+    await processCompany(company)
+    console.log("#")
   }
 }
 
 async function processCompany(company){
-  assert(company.reviews.ceoRating.trend.dates.length == company.reviews.seniorManagement.trend.dates.length)
-
-  let _dates = company.reviews.ceoRating.trend.dates
+  let __dates = [company.reviews.ceoRating.trend.dates, company.reviews.seniorManagement.trend.dates, company.reviews.overallRating.trend.dates]
+  let _dates = __dates.sort((a,b) => { return b.length - a.length})[0] // select longest dates obj
   let _companyName = company.name
   let _ticker = company.ticker
-  let _ceoRating = company.reviews.ceoRating.trend.employerRatings
+  let _ceoRating = company.reviews.ceoRating.trend
   let _ceoRatingSize = company.reviews.ceoRating.distribution.values.reduce((prev,curr) => { return prev + curr }, 0)
-  let _upMgmtRating = company.reviews.seniorManagement.trend.employerRatings
+  let _upMgmtRating = company.reviews.seniorManagement.trend
   let _upMgmtRatingSize = company.reviews.seniorManagement.distribution.values.reduce((prev,curr) => { return prev + curr }, 0)
-  let _overallRating = company.reviews.overallRating.trend.employerRatings
+  let _overallRating = company.reviews.overallRating.trend
   let _overallRatingSize = company.reviews.overallRating.distribution.values.reduce((prev,curr) => { return prev + curr }, 0)
 
-  let priceRows = company.priceData.split('\r\n')
-  let header = priceRows.shift.split(',').map(e => e.replace('Adj Close','adj_close').toLowerCase())
+  let priceRows = company.priceData.split('\n')
+  let header = priceRows.shift().split(',').map(e => e.replace('Adj Close','adj_close').toLowerCase())
   priceRows = priceRows.map(e => {
     let fields = e.split(',')
     let ret = {}
@@ -44,35 +43,29 @@ async function processCompany(company){
     return ret
   })
 
-  computeEMAs(priceRows)
+  computeEMAs(priceRows) // adds columns to ret object
 
-  for(let d of _dates){
+  for(let i=0; i<_dates.length; i++){
+    let d = _dates[i]
     let _p = getClosePricesByDate(priceRows, d)
-
-    // write out csv line directly
-    let row = {
-      date: d,
-      companyName: _companyName,
-      companyTicker: _ticker,
-      ceoRating: _ceoRating,
-      ceoRatingSize: _ceoRatingSize,
-      upMgmtRating: _upMgmtRating,
-      upMgmtRatingSize: _upMgmtRatingSize,
-      overallRating: _overallRating,
-      overallRatingSize: _overallRatingSize,
-      price: _p.price,
-      priceMA10: _p.EMA10,
-      priceMA14: _p.EMA14
-    }
+    if(!_p) continue
+    // get ratings for current date
+    let ceoRatingIndex = _ceoRating.dates.indexOf(d)
+    let ceoRating = ceoRatingIndex >= 0 ? _ceoRating.employerRatings[ceoRatingIndex] : ''
+    let upMgmtRatingIndex = _upMgmtRating.dates.indexOf(d)
+    let upMgmtRating = upMgmtRatingIndex >= 0 ? _upMgmtRating.employerRatings[upMgmtRatingIndex] : ''
+    let overallRatingIndex = _overallRating.dates.indexOf(d)
+    let overallRating = overallRatingIndex >= 0 ? _overallRating.employerRatings[overallRatingIndex] : ''
+    let row = [d, _companyName, _ticker,ceoRating,_ceoRatingSize,upMgmtRating,_upMgmtRatingSize,overallRating,_overallRatingSize,_p.price,_p.EMA10,_p.EMA14]
+    fs.writeFileSync("./out.csv", row.join(',') + '\n', { flag: 'a' }, function (err) {})
   }
-
 }
 
 function convertDate(date){
   let t = date.split("/")
-  let y = date[0]
-  let m = date[1].padStart(2, '0')
-  let d = date[2].padStart(2, '0')
+  let y = t[0]
+  let m = t[1].padStart(2, '0')
+  let d = t[2].padStart(2, '0')
   return y + '-' + m + '-' + d
 }
 
@@ -80,27 +73,28 @@ function getClosePricesByDate(prices, date){
   let dateConverted = convertDate(date)
   let row = getRowByDate(prices, dateConverted)
   if(!row){
-    console.log("Fatal, date not found. Must develop a function to get closest earlier day's prices")
+    return {price: '', EMA10: '', EMA14: ''} // no prices available
   }
   return {price: row.adj_close, EMA10: row.EMA10, EMA14: row.EMA14}
 
 }
 
 function getRowByDate(prices, date){
-  for(let row of prices){
-    if(row['date'] == date){
-      return row
+  for(let offset = 0; offset < 7; offset++){
+    for(let row of prices){
+      let d = new Date(date)
+      d.setDate(d.getDate() - offset);
+      let ds = d.toLocaleString().split(',')[0]
+      let _date = convertDate(ds)
+      if(row['date'] == _date){
+        return row
+      }
     }
   }
   return null
 }
 
-async function computeEMAs(prices){ // prices : [{date: '', adj_close:''}, ...]
-  /* 2021/2/21
-  Date,Open,High,Low,Close,Adj Close,Volume
-2020-08-03,151.089996,151.419998,149.309998,150.410004,139.011520,2264900
-2020-08-04,151.089996,151.419998,149.309998,150.410004,139.011520,2264900*/
-
+async function computeEMAs(prices){
   const multiplier10 = 2 / (10 + 1)
   const multiplier14 = 2 / (14 + 1)
   let state10 = prices[0].adj_close
@@ -114,48 +108,12 @@ async function computeEMAs(prices){ // prices : [{date: '', adj_close:''}, ...]
   }
 }
 
-function getEMAVal(ema, multiplier, closePrice){
-  return closePrice * multiplier + ema * (1 - multiplier)
-}
-
 async function setupMongoDB(){
   const uri = "mongodb+srv://admin:" + process.env.MONGODB_PWD + "@cluster0.9pbl5q2.mongodb.net/?retryWrites=true&w=majority";
   mongoDB = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
   await mongoDB.connect();
 }
 
-// columns will be: -time, -company, -ticker, priceClose, priceMA10, priceMA14, -ceoRating, -ceoRatingSize, -upMgmtRating, -upMgmtRatingSize,
 function setupCSV(){
-  const createCsvWriter = CSVWriter.createObjectCsvWriter;
-  csvWriter = createCsvWriter({
-    path: 'out.csv',
-    header: [
-      {id: 'date', title: 'Date'},
-      {id: 'companyName', title: 'Company Name'},
-      {id: 'companyTicker', title: 'Company Ticker'},
-      {id: 'ceoRating', title: 'ceoRating'},
-      {id: 'ceoRatingSize', title: 'ceoRatingSize'},
-      {id: 'upMgmtRating', title: 'upMgmtRating'},
-      {id: 'upMgmtRatingSize', title: 'upMgmtRatingSize'},
-      {id: 'overallRating', title: 'overallRating'},
-      {id: 'overallRatingSize', title: 'overallRatingSize'},
-      {id: 'price', title: 'Price'},
-      {id: 'priceMA10', title: 'PriceMA10'},
-      {id: 'priceMA14', title: 'PriceMA14'},
-    ]
-  });
-
-}
-
-async function writeOutCsv(data){
-  csvWriter
-    .writeRecords(data)
-}
-
-function assert(cond, error){
-  // for development 
-  if(cond){
-    console.log(error)
-    process.exit()
-  }
+  fs.writeFileSync("./out.csv", 'Date,Company Name,Company Ticker,ceoRating,ceoRatingSize,upMgmtRating,upMgmtRatingSize,overallRating,overallRatingSize,Price,PriceMA10,PriceMA14\n', { flag: 'w' }, function (err) {});
 }

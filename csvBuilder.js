@@ -23,8 +23,13 @@ async function main(){
 async function processCompany(company){
   let __dates = [company.reviews.ceoRating.trend.dates, company.reviews.seniorManagement.trend.dates, company.reviews.overallRating.trend.dates]
   let _dates = __dates.sort((a,b) => { return b.length - a.length})[0] // select longest dates obj
+
   let _companyName = company.name
   let _ticker = company.ticker
+  let _companySize = company.companyData["employer-size"]
+  let _companyType = company.companyData["employer-type"]
+  let _companyIndustry = company.companyData["employer-industry"]
+  let _companyRevnue = company.companyData["employer-revenue"]
   let _ceoRating = company.reviews.ceoRating.trend
   let _ceoRatingSize = company.reviews.ceoRating.distribution.values.reduce((prev,curr) => { return prev + curr }, 0)
   let _upMgmtRating = company.reviews.seniorManagement.trend
@@ -56,17 +61,17 @@ async function processCompany(company){
     let upMgmtRating = upMgmtRatingIndex >= 0 ? _upMgmtRating.employerRatings[upMgmtRatingIndex] : ''
     let overallRatingIndex = _overallRating.dates.indexOf(d)
     let overallRating = overallRatingIndex >= 0 ? _overallRating.employerRatings[overallRatingIndex] : ''
-    let row = [d, _companyName, _ticker,ceoRating,_ceoRatingSize,upMgmtRating,_upMgmtRatingSize,overallRating,_overallRatingSize,_p.price,_p.EMA10,_p.EMA14]
+    let row = [d, _companyName, _ticker, _companySize, _companyType, _companyIndustry, _companyRevnue, ceoRating,_ceoRatingSize,upMgmtRating,_upMgmtRatingSize,overallRating,_overallRatingSize,_p.price,_p.EMA10,_p.EMA14]
     fs.writeFileSync("./out.csv", row.join(',') + '\n', { flag: 'a' }, function (err) {})
   }
 }
 
-function convertDate(date){
+function convertDate(date, invert = false){
   let t = date.split("/")
-  let y = t[0]
+  let y = t[0].padStart(2, '0')
   let m = t[1].padStart(2, '0')
   let d = t[2].padStart(2, '0')
-  return y + '-' + m + '-' + d
+  return invert ? d + '-' + y + '-' + m : y + '-' + m + '-' + d
 }
 
 function getClosePricesByDate(prices, date){
@@ -81,11 +86,12 @@ function getClosePricesByDate(prices, date){
 
 function getRowByDate(prices, date){
   for(let offset = 0; offset < 7; offset++){
+    let t = 0;
     for(let row of prices){
       let d = new Date(date)
       d.setDate(d.getDate() - offset);
       let ds = d.toLocaleString().split(',')[0]
-      let _date = convertDate(ds)
+      let _date = convertDate(ds, true)
       if(row['date'] == _date){
         return row
       }
@@ -115,5 +121,5 @@ async function setupMongoDB(){
 }
 
 function setupCSV(){
-  fs.writeFileSync("./out.csv", 'Date,Company Name,Company Ticker,ceoRating,ceoRatingSize,upMgmtRating,upMgmtRatingSize,overallRating,overallRatingSize,Price,PriceMA10,PriceMA14\n', { flag: 'w' }, function (err) {});
+  fs.writeFileSync("./out.csv", 'Date,Company Name,Company Ticker,Company Size, Company Type, Company Industry, Company Revenue, ceoRating,ceoRatingSize,upMgmtRating,upMgmtRatingSize,overallRating,overallRatingSize,Price,PriceMA10,PriceMA14\n', { flag: 'w' }, function (err) {});
 }

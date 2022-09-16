@@ -26,10 +26,10 @@ async function processCompany(company){
 
   let _companyName = company.name
   let _ticker = company.ticker
-  let _companySize = company.companyData["employer-size"]
-  let _companyType = company.companyData["employer-type"]
-  let _companyIndustry = company.companyData["employer-industry"]
-  let _companyRevnue = company.companyData["employer-revenue"]
+  let _companySize = (company.companyData["employer-size"] || '').replaceAll(',','')
+  let _companyType = (company.companyData["employer-type"] || '').replaceAll(',','')
+  let _companyIndustry = (company.companyData["employer-industry"] || '').replaceAll(',','')
+  let _companyRevnue = (company.companyData["employer-revenue"] || '').replaceAll(',','')
   let _ceoRating = company.reviews.ceoRating.trend
   let _ceoRatingSize = company.reviews.ceoRating.distribution.values.reduce((prev,curr) => { return prev + curr }, 0)
   let _upMgmtRating = company.reviews.seniorManagement.trend
